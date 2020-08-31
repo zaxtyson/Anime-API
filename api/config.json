@@ -1,0 +1,12 @@
+{
+    "engines": {
+      "api.engines.yhdm": true,
+      "api.engines.zzfun": true,
+      "api.engines.agefans": true,
+      "api.engines.eyunzhu": true
+    },
+    "danmaku": {
+        "api.danmaku.bilibili": true,
+        "api.danmaku.bahamut": true
+    }
+}
