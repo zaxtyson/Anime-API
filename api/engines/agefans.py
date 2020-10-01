@@ -1,8 +1,9 @@
-import requests
 import time
 from random import random
 
-from api.base import AnimeEngine, VideoHandler, HtmlParseHelper
+import requests
+
+from api.base import AnimeEngine, VideoHandler
 from api.logger import logger
 from api.models import AnimeMetaInfo, AnimeDetailInfo, Video, VideoCollection
 
@@ -75,7 +76,7 @@ class AgeFans(AnimeEngine):
         return anime_detail
 
 
-class AgeFansVideoHandler(VideoHandler, HtmlParseHelper):
+class AgeFansVideoHandler(VideoHandler):
 
     def __init__(self, video):
         VideoHandler.__init__(self, video)

@@ -1,5 +1,6 @@
-from flask import Flask, jsonify, request, render_template, Response
 from os.path import dirname
+
+from flask import Flask, jsonify, request, render_template, Response
 
 from api.cachedb import AnimeDB, DanmakuDB
 from api.config import GLOBAL_CONFIG

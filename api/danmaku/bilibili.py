@@ -75,7 +75,7 @@ class BiliBili(DanmakuEngine):
         """
         ret = []
         params = {"oid": cid}
-        resp = self.get(self._dm_api, params=params)
+        resp = self.get(self._dm_api, params=params, timeout=10)
         if resp.status_code != 200:
             return ret
         dm_list = re.findall(r'p="(\d+\.?\d*?),\d,\d\d,(\d+?),\d+,(\d),.+?>(.+?)</d>', resp.text)

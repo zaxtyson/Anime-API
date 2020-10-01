@@ -22,9 +22,8 @@ logger.addHandler(console_handler)
 logging_path = os.path.dirname(__file__) + "/logs"
 if not os.path.exists(logging_path):
     os.makedirs(logging_path)
-file_handler = TimedRotatingFileHandler(filename=logging_path + "/api.log", when="H", interval=1, backupCount=3, encoding="utf-8")
+file_handler = TimedRotatingFileHandler(filename=logging_path + "/api.log", when="H", interval=1, backupCount=3,
+                                        encoding="utf-8")
 file_handler.setFormatter(formatter)
 file_handler.setLevel(logging.DEBUG)
 logger.addHandler(file_handler)
-
-

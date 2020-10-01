@@ -1,4 +1,4 @@
-from api.base import AnimeEngine, VideoHandler, HtmlParseHelper
+from api.base import AnimeEngine, VideoHandler
 from api.logger import logger
 from api.models import AnimeMetaInfo, AnimeDetailInfo, Video, VideoCollection
 
@@ -51,7 +51,7 @@ class Bimibimi(AnimeEngine):
         return anime_detail
 
 
-class BimibimiVideoHandler(VideoHandler, HtmlParseHelper):
+class BimibimiVideoHandler(VideoHandler):
     def get_real_url(self):
         """通过视频的 play_id 获取视频链接"""
         play_url = "https://proxy.app.maoyuncloud.com/app/video/play" + self.get_raw_url()

@@ -8,6 +8,7 @@
     },
     "danmaku": {
         "api.danmaku.bilibili": true,
-        "api.danmaku.bahamut": false
+        "api.danmaku.bimibimi": true,
+        "api.danmaku.bahamut": true
     }
 }

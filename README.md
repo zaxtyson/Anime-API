@@ -2,7 +2,6 @@
 <h3 align="center">- Anime API -</h3>
 <p align="center">
 <img src="https://img.shields.io/github/v/release/zaxtyson/Anime-API.svg?logo=bilibili">
-<img src="https://img.shields.io/github/downloads/zaxtyson/Anime-API/total">
 </p>
 
 ## 简介
