@@ -20,11 +20,14 @@ class BiliBili(DanmakuEngine):
         """搜索番剧信息"""
         logger.info(f"Searching for danmaku: {keyword}")
         ret = []
-        params = {"keyword": keyword, "search_type": "media_bangumi"}
-        params2 = {"keyword": keyword, "search_type": "video", "tids": 13, "order": "dm", "page": 1, "duration": 4}
+        params = {"keyword": keyword, "search_type": "media_bangumi"}  # 搜索番剧
+        params2 = {"keyword": keyword, "search_type": "media_ft"}  # 搜索影视
+        # 用户上传的60 分钟以上的视频, 按弹幕数量排序
+        params3 = {"keyword": keyword, "search_type": "video", "tids": 13, "order": "dm", "page": 1, "duration": 4}
         task_list = [
             (self.get, (self._search_api, params), {}),
-            (self.get, (self._search_api, params2), {})  # 用户上传的60 分钟以上的视频, 按弹幕数量排序
+            (self.get, (self._search_api, params2), {}),
+            (self.get, (self._search_api, params3), {})
         ]
         resp_list = self.submit_tasks(task_list)  # 多线程同时搜索
         for resp in resp_list:
