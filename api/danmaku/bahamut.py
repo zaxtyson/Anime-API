@@ -56,6 +56,7 @@ class DanmukaBahamt(DanmakuEngine):
                 item["time"],  # 弹幕的时间
                 item["position"],  # 弹幕位置
                 int(item["color"][1:], 16),  # 弹幕颜色 10 进制
+                "",
                 self.convert_to_zh(item["text"]),  # 弹幕繁体转简体
             ])
         return ret

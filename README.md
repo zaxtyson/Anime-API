@@ -49,6 +49,7 @@ GET /video/<hash_key>/proxy             Return the binary stream of video by API
 GET /danmaku/search/<name>              Return danmaku summary information
 GET /danmaku/detail/<hash_key>          Return danmaku details information
 GET /danmaku/data/<hash_key>/v3/        Return the danmaku data with Dplayer supported format
+GET /bangumi/timeline                   Return anime update info recently
 
 Settings Interface:
 GET  /settings                          Return the current settings information
@@ -70,3 +71,13 @@ GET /video/<hash_key>/proxy_player      Play video online by API proxy
 将你编写的资源引擎放到 `api/engines` 目录下, 在配置文件 `api/config.json` 中将其启用即可
 
 详见 [API 文档](https://anime-api.readthedocs.io/zh/latest/#)
+
+## 更新日志
+
+### `v0.7.0`
+
+- 修复 bimibimi 部分视频解析失败的问题和弹幕 undefined 的问题
+- 补充 bilibili 影视区弹幕
+- 新增弹幕源 youku
+- 新增弹幕源 tencent
+- 增加新番更新表接口

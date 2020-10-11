@@ -74,7 +74,7 @@ class BiliBili(DanmakuEngine):
     def get_danmaku(self, cid: str):
         """解析一集视频的弹幕, 处理为 DPlayer 可接受的格式
         返回弹幕 list, 弹幕格式为:
-                [time, pos, color, message],  # 距离视频开头的秒数(float), 位置参数(0右边,1上边,2底部), 颜色码 10 进制, 弹幕内容
+                [time, pos, color, user, message],  # 距离视频开头的秒数(float), 位置参数(0右边,1上边,2底部), 颜色码 10 进制, 弹幕内容
         """
         ret = []
         params = {"oid": cid}

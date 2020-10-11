@@ -1,3 +1,5 @@
+import re
+
 from api.base import AnimeEngine, VideoHandler
 from api.logger import logger
 from api.models import AnimeMetaInfo, AnimeDetailInfo, Video, VideoCollection
@@ -63,8 +65,10 @@ class BimibimiVideoHandler(VideoHandler):
             return "error"
         data = resp.json()["data"][0]
         real_url = data["url"]
-        if data.get("parse"):  # 需要进一步处理
-            url = "http://49.234.56.246/danmu/json.php?url=" + real_url
+        parse_js = data.get("parse")
+        if parse_js:  # 需要进一步处理
+            parse_api = re.search(r'{"(http.+?)"}', parse_js).group(1)
+            url = parse_api + real_url
             resp = self.get(url)
             real_url = resp.json().get("url") or "error"
         elif "qq.com" in real_url:
