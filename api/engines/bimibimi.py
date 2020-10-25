@@ -1,11 +1,11 @@
 import re
 
-from api.base import AnimeEngine, VideoHandler
+from api.base import BaseEngine, VideoHandler
 from api.logger import logger
 from api.models import AnimeMetaInfo, AnimeDetailInfo, Video, VideoCollection
 
 
-class Bimibimi(AnimeEngine):
+class Bimibimi(BaseEngine):
 
     def __init__(self):
         self._base_url = "https://proxy.app.maoyuncloud.com"

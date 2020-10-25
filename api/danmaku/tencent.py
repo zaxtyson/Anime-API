@@ -94,6 +94,8 @@ class DanmakuTencent(DanmakuEngine):
         for item in data:
             dmk = Danmaku()
             dmk.name = item["title"]
+            if "预告片" in dmk.name:
+                continue  # 预告片不要
             dmk.cid = item["id"]  # 视频id "j31520vrtpw"
             result.append(dmk)
         return result
@@ -136,7 +138,7 @@ class DanmakuTencent(DanmakuEngine):
             style = item["content_style"]
             if not style:
                 color = "ffffff"
-                position = 1
+                position = 0
             else:
                 style = json.loads(style)
                 color = style.get("color", "ffffff")  # 10 进制颜色

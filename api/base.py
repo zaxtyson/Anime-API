@@ -12,7 +12,7 @@ from zhconv import convert
 from api.logger import logger
 from api.models import AnimeDetailInfo, AnimeMetaInfo, Video, DanmakuMetaInfo, DanmakuCollection
 
-__all__ = ["HtmlParseHelper", "VideoHandler", "AnimeEngine", "DanmakuEngine"]
+__all__ = ["HtmlParseHelper", "VideoHandler", "BaseEngine", "DanmakuEngine"]
 
 
 class HtmlParseHelper(object):
@@ -100,7 +100,7 @@ class HtmlParseHelper(object):
         return result
 
 
-class AnimeEngine(HtmlParseHelper):
+class BaseEngine(HtmlParseHelper):
     """基础引擎类, 用户自定义引擎应该继承此类"""
 
     def search(self, keyword: str) -> List[AnimeMetaInfo]:

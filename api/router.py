@@ -3,8 +3,9 @@ from os.path import dirname
 from flask import Flask, jsonify, request, render_template, Response
 
 from api.bangumi.timeline import Timeline
-from api.cachedb import AnimeDB, DanmakuDB
+from api.cachedb import AnimeDB, DanmakuDB, IPTVDB
 from api.config import GLOBAL_CONFIG
+from api.live.iptv import IPTV
 from api.logger import logger
 from api.manager import EngineManager
 
@@ -21,6 +22,7 @@ class Router(object):
         self._anime_db = AnimeDB()
         self._danmaku_db = DanmakuDB()
         self._anime_update = Timeline()
+        self._iptv_db = IPTVDB()
 
     def listen(self, host: str, port: int):
         self._host = host
@@ -207,6 +209,25 @@ class Router(object):
             tl_list = self._anime_update.get_full_timeline()
             data_json = [tl.to_dict() for tl in tl_list]
             return jsonify(data_json)
+
+        @self._app.route("/live/list")
+        def get_iptv_list():
+            """直播源"""
+            ret = []
+            for tv in IPTV().get_tv_list():
+                key = self._iptv_db.store(tv)
+                ret.append({
+                    "name": tv.name,
+                    "url": tv.raw_url,
+                    "proxy_player": f"{self._domain}/live/{key}/player"
+                })
+            return jsonify(ret)
+
+        @self._app.route("/live/<hash_key>/player")
+        def iptv_player(hash_key):
+            """简易播放器测试用"""
+            tv = self._iptv_db.fetch(hash_key)
+            return render_template("player.html", real_url=tv.raw_url, video_name=tv.name)
 
         @self._app.after_request
         def apply_caching(response):

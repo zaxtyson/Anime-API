@@ -6,7 +6,7 @@ from typing import List
 
 import requests
 
-from api.base import AnimeEngine, DanmakuEngine
+from api.base import BaseEngine, DanmakuEngine
 from api.base import VideoHandler
 from api.config import GLOBAL_CONFIG
 from api.logger import logger
@@ -35,7 +35,7 @@ class EngineManager(object):
             if issubclass(cls, VideoHandler):
                 self._handlers.setdefault(cls_name, cls)  # 'xxHandler': <class 'api.engines.xx.xxHandler'>
                 logger.info(f"Loading VideoHandler {cls_name}: {cls}")
-            if issubclass(cls, AnimeEngine) and cls != AnimeEngine:
+            if issubclass(cls, BaseEngine) and cls != BaseEngine:
                 self._engines.setdefault(cls.__module__, cls)  # 'api.engines.xx': <class 'api.engines.xx.xxEngine'>
                 logger.info(f"Loading engine {cls.__module__}.{cls.__name__}: {cls}")
 

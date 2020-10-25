@@ -78,6 +78,7 @@ GET /video/<hash_key>/proxy_player      Play video online by API proxy
 
 - 修复 bimibimi 部分视频解析失败的问题和弹幕 undefined 的问题
 - 补充 bilibili 影视区弹幕
+- 新增引擎 meijuxia
 - 新增弹幕源 youku
 - 新增弹幕源 tencent
 - 增加新番更新表接口

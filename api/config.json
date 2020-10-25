@@ -4,7 +4,8 @@
     "api.engines.zzfun": true,
     "api.engines.agefans": true,
     "api.engines.eyunzhu": false,
-    "api.engines.bimibimi": true
+    "api.engines.bimibimi": true,
+    "api.engines.meijuxia": true
   },
   "danmaku": {
     "api.danmaku.bilibili": true,
