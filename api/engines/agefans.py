@@ -86,14 +86,14 @@ class AgeFansVideoHandler(VideoHandler):
 
     def set_cookie(self):
         # 计算 k2 的值
-        # https://www.agefans.tv/age/static/js/s_runtimelib.js?ver=202008211700   __getplay_pck()
+        # https://cdn.jinfu.love/age/static/js/s_runtimelib2.js?ver=202010240154   __getplay_pck()
         t1 = self._client.cookies.get("t1")
         logger.debug(f"Get cookie t1={t1}")
         t = (int(t1) // 1000) >> 5
-        k2 = (t * (t % 4096) + 39382) * (t % 4096) + t
+        k2 = (t * (t % 4096) * 3 + 83215) * (t % 4096) + t
         k2 = str(k2)
         # 计算 t2 的值, 生成一个后三位包含 k2 最后一位的数时间戳
-        # https://www.agefans.tv/age/static/js/s_dett.js?ver=202008211700   __getplay_pck2()
+        # https://cdn.jinfu.love/age/static/js/s_dett.js?ver=202010240154   __getplay_pck2()
         k2_last = k2[-1]
         t2 = ""
         while True:

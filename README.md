@@ -74,6 +74,11 @@ GET /video/<hash_key>/proxy_player      Play video online by API proxy
 
 ## 更新日志
 
+### `v0.7.1`
+
+- 修复 agefans 视频解析异常的问题
+- 修复 bimibimi 部分视频解析失败的问题
+
 ### `v0.7.0`
 
 - 修复 bimibimi 部分视频解析失败的问题和弹幕 undefined 的问题
