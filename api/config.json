@@ -5,12 +5,13 @@
     "api.engines.agefans": true,
     "api.engines.eyunzhu": false,
     "api.engines.bimibimi": true,
-    "api.engines.meijuxia": true
+    "api.engines.meijuxia": false,
+    "api.engines.k1080": true
   },
   "danmaku": {
     "api.danmaku.bilibili": true,
-    "api.danmaku.bimibimi": true,
-    "api.danmaku.bahamut": false,
+    "api.danmaku.bimibimi": false,
+    "api.danmaku.bahamut": true,
     "api.danmaku.youku": true,
     "api.danmaku.tencent": true
   }

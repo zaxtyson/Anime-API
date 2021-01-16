@@ -1,13 +1,18 @@
+import asyncio
+from json import dumps
 from os.path import dirname
+from threading import Thread
 
+import websockets
 from flask import Flask, jsonify, request, render_template, Response
 
 from api.bangumi.timeline import Timeline
-from api.cachedb import AnimeDB, DanmakuDB, IPTVDB
 from api.config import GLOBAL_CONFIG
+from api.core.cachedb import AnimeDB, DanmakuDB, IPTVDB
+from api.core.manager import EngineManager
 from api.live.iptv import IPTV
-from api.logger import logger
-from api.manager import EngineManager
+from api.utils.logger import logger
+from api.utils.statistic import Statistics
 
 
 class Router(object):
@@ -15,7 +20,8 @@ class Router(object):
     def __init__(self):
         self._app = Flask(__name__)
         self._debug = False
-        self._port = 80
+        self._port = 6001
+        self._ws_port = 6002  # websocket port
         self._host = "127.0.0.1"
         self._domain = f"http://{self._host}:{self._port}"
         self._engine_mgr = EngineManager()
@@ -23,10 +29,12 @@ class Router(object):
         self._danmaku_db = DanmakuDB()
         self._anime_update = Timeline()
         self._iptv_db = IPTVDB()
+        self._statistics = Statistics()
 
-    def listen(self, host: str, port: int):
+    def listen(self, host: str, port: int = 6001, ws_port: int = 6002):
         self._host = host
         self._port = port
+        self._ws_port = ws_port
         self._domain = f"http://{self._host}:{self._port}"
 
     def set_domain(self, domain: str):
@@ -45,9 +53,21 @@ class Router(object):
                 text = f.read()
             return Response(text, mimetype="text/plain")
 
-        @self._app.route("/search/<name>")
+        @self._app.route("/statistics")
+        def statistics():
+            """百度统计转发, 用户体验计划"""
+            data = self._statistics.transmit(request)
+            return Response(data, mimetype="image/gif")
+
+        @self._app.route("/statistics/<path:hmjs_url>")
+        def get_statistics_js(hmjs_url):
+            # user_agent = request.headers.get("User-Agent")
+            js_text = self._statistics.get_hm_js(self._domain, request.cookies)
+            return Response(js_text, mimetype="application/javascript")
+
+        @self._app.route("/search/<path:name>")
         def search_anime(name):
-            """搜索番剧, 返回番剧摘要信息列表"""
+            """搜索番剧, 返回番剧摘要信息列表, 该方法回阻塞直到所有引擎数据返回"""
             ret = []
             self._anime_db.clear()  # 每次搜索清空缓存数据库
             anime_list = self._engine_mgr.search_anime(name)
@@ -69,6 +89,7 @@ class Router(object):
                 "cover_url": anime_detail.cover_url,
                 "description": anime_detail.desc,
                 "category": anime_detail.category,
+                "engine": anime_detail.engine,
                 "play_lists": []  # 一部番剧可能有多个播放列表(播放线路)
             }
             for video_collection in anime_detail:
@@ -133,7 +154,7 @@ class Router(object):
             real_url = f"/video/{hash_key}/proxy"
             return render_template("player.html", real_url=real_url, video_name=video.name)
 
-        @self._app.route("/danmaku/search/<name>")
+        @self._app.route("/danmaku/search/<path:name>")
         def search_danmaku(name):
             """搜索番剧弹幕库"""
             self._danmaku_db.clear()  # 每次搜索清空上一次搜索结果
@@ -237,7 +258,36 @@ class Router(object):
             response.headers["Server"] = "Anime-API"
             return response
 
+    async def search_and_push(self, websocket):
+        """向前端推送搜索结果"""
+        keyword = await websocket.recv()
+        self._anime_db.clear()
+        for meta in self._engine_mgr.search_anime(keyword):
+            hash_key = self._anime_db.store(meta)
+            anime_meta = {"title": meta.title, "cover_url": meta.cover_url, "category": meta.category,
+                          "description": meta.desc, "engine": meta.engine,
+                          "url": f"{self._domain}/detail/" + hash_key}
+            await websocket.send(dumps(anime_meta))
+            ack = await websocket.recv()
+            if ack.lower() != "ok":  # 客户端没收到消息, 重发
+                await websocket.send(dumps(anime_meta))
+
+    async def ws_connection_handler(self, websocket, path):
+        """websockets 连接处理"""
+        logger.debug(f"Websocket connected, path: {path}")
+        if path == "/search":
+            await self.search_and_push(websocket)
+
+    def ws_server(self, loop):
+        """后台的动漫搜索服务, 使用 websockets 通信"""
+        asyncio.set_event_loop(loop)
+        server = websockets.serve(self.ws_connection_handler, self._host, self._ws_port)
+        loop.run_until_complete(server)
+        loop.run_forever()
+
     def run(self):
         """后台运行"""
         self._init_routes()
+        loop = asyncio.new_event_loop()
+        Thread(target=lambda: self.ws_server(loop)).start()
         self._app.run(host=self._host, port=self._port, debug=self._debug, use_reloader=False)

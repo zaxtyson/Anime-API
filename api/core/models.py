@@ -1,3 +1,4 @@
+from base64 import b16encode
 from inspect import currentframe
 from typing import List
 
@@ -53,6 +54,12 @@ class AnimeMetaInfo(object):
     def __repr__(self):
         return f"<AnimeMetaInfo {self.title}>"
 
+    @property
+    def hash(self):
+        """可以通过此信息构造一个对象, 包含引擎和详情页信息"""
+        sign = f"{self.engine}|{self.detail_page_url}".encode("utf-8")
+        return b16encode(sign).decode("utf-8").lower()
+
 
 class AnimeDetailInfo(object):
     """番剧详细信息, 包括视频播放列表"""
@@ -63,6 +70,10 @@ class AnimeDetailInfo(object):
         self.category = ""  # 番剧的分类
         self.desc = ""  # 番剧的简介信息
         self.play_lists: List[VideoCollection] = []  # 播放列表, 一部番剧可能有多条播放路线, 一条线路对应一个 VideoCollection
+
+        frame = currentframe().f_back
+        self.engine = frame.f_globals["__name__"]
+        del frame
 
     def append(self, video_collection: VideoCollection):
         self.play_lists.append(video_collection)

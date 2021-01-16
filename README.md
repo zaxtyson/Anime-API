@@ -29,9 +29,12 @@ pip install -r requirements.txt
 ```
 from api.router import Router
 
+
 if __name__ == '__main__':
     rt = Router()
-    rt.listen("127.0.0.1", 6001)
+    rt.listen("127.0.0.1", port=6001, ws_port=6002)
+    # rt.set_domain("example.com")      # 如果在服务器上使用
+    # rt.enable_debug()                 # 启用 Flask 调试
     rt.run()
 ```
 
@@ -42,7 +45,7 @@ if __name__ == '__main__':
 ```
 API Interface:
 
-GET /search/<name>                      Return anime summary information
+GET /search/<name> (deprecated)         Return anime summary information
 GET /detail/<hash_key>                  Return anime details information
 GET /video/<hash_key>/url               Return the direct URL of video
 GET /video/<hash_key>/proxy             Return the binary stream of video by API proxy
@@ -62,7 +65,13 @@ Form /settings/danmaku                  {"name": "api.danmaku.xxx", "enable": tr
 Test Interface:
 GET /video/<hash_key>/player            Play video online by its direct URL
 GET /video/<hash_key>/proxy_player      Play video online by API proxy
+
+WebSockets Interface:
+/search                                 Async search anime
 ```
+
+- HTTP 默认端口 6001, Websocket 默认端口 6002
+- 搜索动漫可以向 websocket 接口发送 keyword, API 会异步推送数据, 收到数据需要回复 `"ok"`, 否则 API 会重新推送一次
 
 ## 扩展引擎
 
@@ -73,6 +82,15 @@ GET /video/<hash_key>/proxy_player      Play video online by API proxy
 详见 [API 文档](https://anime-api.readthedocs.io/zh/latest/#)
 
 ## 更新日志
+
+### `v1.1.8`
+
+- 新增引擎 k1080p
+- 修复 youku 某些弹幕解析失败的问题
+- 修复 bilibili 用户上传视频弹幕解析失败的问题
+- 修复 bahamut 网站更新导致弹幕抓取失败的问题
+- 搜索结果异步加载
+- 历史记录功能增强, 自动解析上次访问页面
 
 ### `v0.7.1`
 

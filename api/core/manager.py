@@ -2,15 +2,16 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib import import_module
 from inspect import getmembers
 from inspect import isclass
-from typing import List
+from queue import Queue
+from typing import List, Iterator
 
 import requests
 
-from api.base import BaseEngine, DanmakuEngine
-from api.base import VideoHandler
 from api.config import GLOBAL_CONFIG
-from api.logger import logger
-from api.models import AnimeMetaInfo, AnimeDetailInfo, Video, DanmakuMetaInfo, DanmakuCollection, Danmaku
+from api.core.base import BaseEngine, DanmakuEngine
+from api.core.base import VideoHandler
+from api.core.models import AnimeMetaInfo, AnimeDetailInfo, Video, DanmakuMetaInfo, DanmakuCollection, Danmaku
+from api.utils.logger import logger
 
 
 class EngineManager(object):
@@ -33,11 +34,14 @@ class EngineManager(object):
         module = import_module(engine)
         for cls_name, cls in getmembers(module, isclass):
             if issubclass(cls, VideoHandler):
-                self._handlers.setdefault(cls_name, cls)  # 'xxHandler': <class 'api.engines.xx.xxHandler'>
-                logger.info(f"Loading VideoHandler {cls_name}: {cls}")
+                if cls_name not in self._handlers:
+                    self._handlers[cls_name] = cls  # 'xxHandler': <class 'api.engines.xx.xxHandler'>
+                    logger.info(f"Loading VideoHandler: {cls_name}: {cls}")
             if issubclass(cls, BaseEngine) and cls != BaseEngine:
-                self._engines.setdefault(cls.__module__, cls)  # 'api.engines.xx': <class 'api.engines.xx.xxEngine'>
-                logger.info(f"Loading engine {cls.__module__}.{cls.__name__}: {cls}")
+                engine_name = cls.__module__
+                if engine_name not in self._engines:
+                    self._engines[engine_name] = cls  # 'api.engines.xx': <class 'api.engines.xx.xxEngine'>
+                    logger.info(f"Loading Engine: {cls.__name__}: {cls}")
 
     def _load_danmaku(self, danmaku: str):
         """按照配置加载弹幕库引擎
@@ -50,19 +54,27 @@ class EngineManager(object):
                                                 cls)  # 'api.danmaku.xxx': <class 'api.danmaku.xx.xxEngine'>
                 logger.info(f"Loading DanmakuEngine {cls.__module__}.{cls.__name__}: {cls}")
 
-    def search_anime(self, keyword: str) -> List[AnimeMetaInfo]:
+    def search_anime(self, keyword: str) -> Iterator[AnimeMetaInfo]:
         """搜索番剧, 返回番剧的摘要信息(不包括视频列表)"""
         if not keyword:
-            return []
-        result = []
-        executor = ThreadPoolExecutor()
-        engine_list = [e() for e in self._engines.values()]
-        logger.info(f"Searching for anime {keyword}...")
-        all_task = [executor.submit(obj._search, keyword) for obj in engine_list]
-        for task in as_completed(all_task):
-            result += task.result()
-        logger.info(f"Anime searching result in total: {len(result)}")
-        return result
+            return ()
+
+        queue = Queue()
+        futures = []
+
+        def producer(engine_cls):
+            for item in engine_cls()._search(keyword):
+                queue.put(item)
+
+        with ThreadPoolExecutor() as executor:
+            for engine_cls in self._engines.values():
+                futures.append(executor.submit(producer, engine_cls))
+
+            while True:
+                while not queue.empty():
+                    yield queue.get()
+                if all(f.done() for f in futures):
+                    break
 
     def get_anime_detail(self, meta: AnimeMetaInfo) -> AnimeDetailInfo:
         """解析一部番剧的详情页，返回包含视频列表的详细信息"""
@@ -70,9 +82,13 @@ class EngineManager(object):
             logger.error(f"Invalid request")
             return AnimeDetailInfo()
         target_engine = self._engines.get(meta.engine)
-        if not target_engine:
-            logger.error(f"Engine not found: {meta.engine}")
-            return AnimeDetailInfo()
+        if target_engine is not None:
+            return target_engine()._get_detail(meta.detail_page_url)
+        # 如果引擎没加载, 临时加载一次
+        logger.info(f"Engine not found: {meta.engine}, it will be loaded temporarily.")
+        self._load_engine(meta.engine)
+        target_engine = self._engines.pop(meta.engine)
+        logger.info(f"Unloading engine: {target_engine}")
         return target_engine()._get_detail(meta.detail_page_url)
 
     def get_video_url(self, video: Video) -> str:
@@ -98,19 +114,14 @@ class EngineManager(object):
             return requests.Response()
         return target_handler(video).make_response()
 
-    def search_danmaku(self, keyword: str) -> List[DanmakuMetaInfo]:
+    def search_danmaku(self, keyword: str) -> Iterator[DanmakuMetaInfo]:
         """搜索番剧, 返回番剧弹幕的元信息"""
         if not keyword:
-            return []
-        result = []
+            return ()
         executor = ThreadPoolExecutor()
-        engine_list = [e() for e in self._danmaku_engine.values()]
-        logger.info(f"Searching for danmaku {keyword}...")
-        all_task = [executor.submit(obj._search, keyword) for obj in engine_list]
+        all_task = [executor.submit(engine()._search, keyword) for engine in self._danmaku_engine.values()]
         for task in as_completed(all_task):
-            result += task.result()
-        logger.info(f"Danmaku searching result in total: {len(result)}")
-        return result
+            yield from task.result()
 
     def get_danmaku_detail(self, meta: DanmakuMetaInfo) -> DanmakuCollection:
         """解析一部番剧的详情页，返回包含视频列表的详细信息"""

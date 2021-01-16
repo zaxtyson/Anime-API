@@ -1,8 +1,8 @@
 import re
 
-from api.base import BaseEngine, VideoHandler
-from api.logger import logger
-from api.models import AnimeMetaInfo, AnimeDetailInfo, Video, VideoCollection
+from api.core.base import BaseEngine, VideoHandler
+from api.core.models import AnimeMetaInfo, AnimeDetailInfo, Video, VideoCollection
+from api.utils.logger import logger
 
 
 class Bimibimi(BaseEngine):
@@ -14,14 +14,12 @@ class Bimibimi(BaseEngine):
         self._headers = {"User-Agent": "Dart/2.7 (dart:io)", "appid": "4150439554430555"}
 
     def search(self, keyword: str):
-        ret = []
         logger.info(f"Searching for: {keyword}")
         resp = self.get(self._search_api, params={"limit": "100", "key": keyword, "page": "1"}, headers=self._headers)
-        if resp.status_code != 200:
+        if resp.status_code != 200 or resp.json()["data"]["total"] == 0:
             logger.warning(f"Response error: {resp.status_code} {self._search_api}")
-            return ret
-        if resp.json().get("data").get("total") == 0:
-            return ret
+            return
+
         anime_meta_list = resp.json().get("data").get("items")
         for meta in anime_meta_list:
             anime = AnimeMetaInfo()
@@ -29,8 +27,7 @@ class Bimibimi(BaseEngine):
             anime.cover_url = meta["pic"]
             anime.category = meta["type"]
             anime.detail_page_url = meta["id"]
-            ret.append(anime)
-        return ret
+            yield anime
 
     def get_detail(self, anime_id: str):
         resp = self.get(self._detail_api, params={"id": anime_id}, headers=self._headers)
@@ -58,7 +55,7 @@ class BimibimiVideoHandler(VideoHandler):
         """通过视频的 play_id 获取视频链接"""
         play_url = "https://proxy.app.maoyuncloud.com/app/video/play" + self.get_raw_url()
         headers = {"User-Agent": "Dart/2.7 (dart:io)", "appid": "4150439554430555"}
-        logger.info(f"Parsing real url for {play_url}")
+        logger.debug(f"Parsing real url for {play_url}")
         resp = self.get(play_url, headers=headers)
         if resp.status_code != 200:
             logger.warning(f"Response error: {resp.status_code} {play_url}")
@@ -78,5 +75,5 @@ class BimibimiVideoHandler(VideoHandler):
         elif "qq.com" in real_url:
             resp = self.head(real_url, allow_redirects=False)
             real_url = resp.headers.get("Location")  # 重定向之后才是直链
-        logger.info(f"Video real url: {real_url}")
+        logger.debug(f"Video real url: {real_url}")
         return real_url
