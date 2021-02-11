@@ -16,40 +16,9 @@ Anime-API 是一个异步的资源解析框架, 用于组织各类爬虫抓取�
 因为前期以动漫、弹幕抓取为主, 所以叫 Anime-API, 但是后面会加入漫画、小说、音乐等抓取功能~
 
 
-## 食用方法
+## API 文档
 
-```
-git clone https://github.com.cnpmjs.org/zaxtyson/Anime-API.git
-pip install -r requirements.txt
-python app.py
-```
-
-如果在服务器端部署 API 服务，系统中可能存在多个 Python 版本，请使用 Python3.8+ 版本运行
-
-同时，修改 `config.py`，按照提示修改 IP 和域名信息
-
-```
-git clone https://github.com.cnpmjs.org/zaxtyson/Anime-API.git
-cd Anime-API
-vim config.py   # 编辑配置信息
-python3.8 -m pip install -r requirements.txt
-python3.8 app.py
-```
-
-如果需要保持后台服务，请使用 nohup
-
-```
-nohup python3.8 app.py &
-```
-
-浏览器打开 `ip:port` 或者 `domain:port` 就可以开始测试了(默认配置 `127.0.0.1:6001`)
-
-## 模块扩展
-
-- 程序目前包括视频、弹幕解析模块, 后面会加入音乐、漫画等解析模块  
-- 在 API 的支持下， 您可以很容易的编写一个资源解析模块， 扩展程序的功能  
-- 欢迎提交 PR, 但是请提交稳定优质的资源哦 :)  
-- 详见 [API 文档](https://anime-api.readthedocs.io/zh/latest/#)
+[点我点我](https://anime-api.readthedocs.io/zh_CN/latest/#)
 
 ## 更新日志
 

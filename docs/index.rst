@@ -1,26 +1,38 @@
-Test
-==========
+.. _index:
 
-*important*
+======================
+Anime-API Documents
+======================
 
-**more important**
+Anime-API 是一个异步的资源解析框架, 基于 asyncio 和 aiohttp
 
-Test 1
---------
+用于组织各类爬虫抓取互联网上的资源, 为前端提供格式统一的接口服务
 
-Test 1.1
->>>>>>>>>>>>>>>>>>>
+因为前期以动漫、弹幕抓取为主, 所以叫 *Anime-API*
 
-`explicit`
+后面会加入漫画、小说、音乐等抓取功能哦 :)
 
-``code block inline``
+-------------------
 
-Definition of A
-   some explanation A
+**创建 API 服务**:
 
-:Test: Documentation
+    >>> from api.router import APIRouter
+    >>> app = APIRouter("127.0.0.1", 6001)
+    >>> app.set_domain("http://localhost")
+    >>> app.run()
+
+----------------------
 
 
->>> print("This is a doctest block.")
-This is a doctest block.
+食用指南
+============
 
+那么，这个破玩意到底怎么用呢?
+
+.. toctree::
+   :maxdepth: 2
+
+   user/install
+   user/interface
+   user/extension
+   user/skills

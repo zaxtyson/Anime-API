@@ -1,0 +1,67 @@
+.. _interface:
+
+===============
+路由接口说明
+===============
+
+API 的路由返回的数据为 JSON 格式
+
+
+视频相关接口
+===================
+
+WS  /anime/search                                       异步视频搜索接口, 通过 Websocket 即时推送搜索结果
+GET /anime/search/<keyword>                             视频搜索接口, 阻塞至所有引擎处理完成, 返回全部结果
+GET /anime/<token>                                      剧集详情接口, 返回播放列表等信息
+GET /anime/<token>/<playlist>/<episode>                 获取视频直链等信息
+GET /anime/bangumi/updates                              番组表接口, 获取最近更新的番剧信息
+GET /anime/<token>/<playlist>/<episode>/player          视频播放测试
+
+
+
+弹幕相关接口
+=====================
+
+WS  /danmaku/search                                     异步弹幕搜索接口, 通过 Websocket 即时推送搜索结果
+GET /danmaku/search/<keyword>                           弹幕搜索接口, 阻塞至所有引擎处理完成, 返回全部结果
+GET /danmaku/<token>                                    弹幕详情接口, 返回弹幕播放列表
+GET /danmaku/<token>/<episode>/v3/                      弹幕数据接口, 返回一集视频的弹幕(Dplayer格式)
+
+
+
+漫画相关接口
+===================
+
+WS  /comic/search                                       异步漫画搜索接口
+GET /comic/search/<name>                                漫画搜索接口
+GET /comic/<token>                                      获取漫画详情页信息
+GET /comic/<token>/<chapter>                            获取一章漫画的信息
+GET /comic/<token>/<chapter>/<page>                     重定向到本页图片的直链
+GET /comic/recommends                                   近期热门漫画推荐
+GET /comic/reader/<token>/<chapter>                     漫画阅读测试
+
+
+
+IPTV相关接口
+==============
+
+GET /iptv/list                                          获取 IPTV 源列表
+
+
+代理相关接口
+===============
+
+GET /proxy/image/<url>                                  代理访问跨域的图片资源
+GET /proxy/stream/<token>/<playlist>/<episode>          代理普通视频数据流, 用于解决防盗链和跨域问题
+GET /proxy/hls/<token>/<playlist>/<episode>             代理 HLS 视频数据流, 用于解决防盗链和跨域问题
+
+
+系统相关接口
+================
+
+GET /system/logs                                        API 运行日志
+GET /system/version                                     获取系统版本信息
+GET /system/clear                                       清空 API 缓存, 返回释放内存大小(KB)
+GET /system/modules                                     获取引擎模块信息
+POST /system/modules                                    启用/停用指定的引擎模块
+    <= Json [{"module": "api.xxx.xxx", "enable": true}, ...]

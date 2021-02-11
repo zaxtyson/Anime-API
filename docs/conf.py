@@ -54,7 +54,28 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 #
 html_theme = 'alabaster'
 
+# Theme options are theme-specific and customize the look and feel of a theme
+# further.  For a list of options available for each theme, see the
+# documentation.
+html_theme_options = {
+    'show_powered_by': False,
+    'logo': 'logo.ico',
+    'logo_name': True,
+    'logo_text_align': 'center',
+    'fixed_sidebar': False,
+    'github_user': 'zaxtyson',
+    'github_repo': 'Anime-API',
+    'github_type': 'star',
+    'github_count': 'true',
+    'github_button': True,
+    'github_banner': True,
+    'description': "爆裂吧，现实！粉碎吧，精神！放逐这个世界！"
+}
+
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+# If true, links to the reST sources are added to the pages.
+html_show_sourcelink = False
