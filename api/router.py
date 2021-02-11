@@ -2,7 +2,7 @@ import asyncio
 from os.path import dirname
 
 from quart import Quart, jsonify, request, render_template, \
-    Response, websocket
+    Response, websocket, redirect
 
 from api.config import Config
 from api.core.agent import Agent
@@ -154,11 +154,11 @@ class APIRouter:
             return jsonify(ret)
 
         @self._app.route("/anime/<token>/<playlist>/<episode>")
-        async def parse_anime_info(token: str, playlist: int, episode: str):
+        async def parse_anime_info(token: str, playlist: str, episode: str):
             """获取视频信息"""
             url = await self._agent.get_anime_real_url(token, int(playlist), int(episode))
             info = {
-                "raw_url": url.real_url,
+                "raw_url": f"{self._domain}/anime/{token}/{playlist}/{episode}/url",
                 "proxy_url": f"{self._domain}/proxy/stream/{token}/{playlist}/{episode}",
                 "format": url.format,
                 "resolution": url.resolution,
@@ -166,6 +166,12 @@ class APIRouter:
                 "lifetime": url.left_lifetime
             }
             return jsonify(info)
+
+        @self._app.route("/anime/<token>/<playlist>/<episode>/url")
+        async def redirect_to_real_url(token: str, playlist: str, episode: str):
+            """重定向到视频直链, 防止直链过期导致播放器无法播放"""
+            url = await self._agent.get_anime_real_url(token, int(playlist), int(episode))
+            return redirect(url.real_url)
 
         @self._app.route("/anime/<token>/<playlist>/<episode>/player")
         async def player_without_proxy(token, playlist, episode):
