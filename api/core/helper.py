@@ -1,5 +1,4 @@
 import asyncio
-from asyncio.exceptions import TimeoutError
 from typing import Optional, AsyncIterable
 from typing import TypeVar, Iterable, Coroutine, AsyncIterator, Any
 
@@ -68,10 +67,8 @@ class HtmlParseHelper:
             resp = await self.session.head(url, params=params, **kwargs)
             logger.debug(f"Code: {resp.status} | Type: {resp.content_type} | Length: {resp.content_length} ({url})")
             return resp
-        except TimeoutError:
-            logger.warning(f"Connection timed out: {url}")
         except Exception as e:
-            logger.warning(e)
+            logger.warning(f"Exception in {self.__class__}: {e}")
 
     async def get(self, url: str, params: dict = None, **kwargs) -> Optional[ClientResponse]:
         """
@@ -83,10 +80,8 @@ class HtmlParseHelper:
             resp = await self.session.get(url, params=params, **kwargs)
             logger.debug(f"Code: {resp.status} | Type: {resp.content_type} | Length: {resp.content_length} ({url})")
             return resp
-        except TimeoutError:
-            logger.warning(f"Connection timed out: {url}")
         except Exception as e:
-            logger.warning(e)
+            logger.warning(f"Exception in {self.__class__}: {e}")
 
     async def post(self, url: str, data: dict = None, **kwargs) -> Optional[ClientResponse]:
         """
@@ -98,10 +93,8 @@ class HtmlParseHelper:
             resp = await self.session.post(url, data=data, **kwargs)
             logger.debug(f"Code: {resp.status} | Type: {resp.content_type} | Length: {resp.content_length} ({url})")
             return resp
-        except TimeoutError:
-            logger.warning(f"Connection timed out: {url}")
         except Exception as e:
-            logger.warning(e)
+            logger.warning(f"Exception in {self.__class__}: {e}")
 
     @staticmethod
     def xpath(html: str, xpath: str) -> Optional[etree.Element]:
