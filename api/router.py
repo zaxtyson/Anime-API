@@ -171,7 +171,9 @@ class APIRouter:
         async def redirect_to_real_url(token: str, playlist: str, episode: str):
             """重定向到视频直链, 防止直链过期导致播放器无法播放"""
             url = await self._agent.get_anime_real_url(token, int(playlist), int(episode))
-            return redirect(url.real_url)
+            # 现在很多浏览器对把 302 视为 303, 无视原先请求方法, 这是不符合 RFC 1945 和 RFC 2068 的
+            # 为了实现动态的重定向, 使用 307 重定向
+            return redirect(url.real_url, code=307)
 
         @self._app.route("/anime/<token>/<playlist>/<episode>/player")
         async def player_without_proxy(token, playlist, episode):

@@ -35,4 +35,6 @@ Anime-API 是一个异步的资源解析框架, 基于 asyncio 和 aiohttp
    user/install
    user/interface
    user/extension
+   user/tools
    user/skills
+   user/class
