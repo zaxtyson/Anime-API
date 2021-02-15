@@ -21,14 +21,16 @@ class HtmlParseHelper:
 
     async def init_session(self, session: Optional[ClientSession] = None):
         """
-        初始化 ClientSession, 使用 get/post/head 方法之前需要调用一次
+        初始化 ClientSession, 使用 get/post/head 方法之前需要调用一次,
+        ClientSession 内部维护了连接池, 因此不建议每一个请求创建一个 session,
+        这里默认为每一个类创建一个 persistent session, 或者手动设置一个, 以实现复用,
+        在 __init__ 中初始化 session 会出现 warning, 官方在 aiohttp 4.0 之后将只允许在协程中创建 session,
+        See:
 
-        ClientSession 内部维护了连接池, 因此不建议每一个请求创建一个 session
-        这里默认为每一个类创建一个 persistent session, 或者手动设置一个, 以实现复用
-        在 __init__ 中初始化 session 会出现 warning, 官方在 aiohttp 4.0 之后将只允许在协程中创建 session
+            https://github.com/aio-libs/aiohttp/issues/3658
+            https://github.com/aio-libs/aiohttp/issues/4932
 
-        See: https://github.com/aio-libs/aiohttp/issues/3658
-             https://github.com/aio-libs/aiohttp/issues/4932
+        :param session: 用于复用的 ClientSession 对象
         """
         if not self.session:
             if session:
@@ -117,6 +119,7 @@ class HtmlParseHelper:
         """
         将多个协程任务加入事件循环并发运行, 返回异步生成器
         每次迭代返回一个已经完成的协程结果, 返回结果不保证顺序
+
         :param tasks: 协程列表, 协程返回类型为 T
         :return: 异步生成器, 元素类型为 T
         """
@@ -128,6 +131,7 @@ class HtmlParseHelper:
         """
         将多个协程任务加入事件循环并发运行, 返回异步生成器
         每次迭代返回一个已经完成的协程``结果中的元素``, 返回结果不保证顺序
+
         :param tasks: 协程列表, 协程的返回类型为 Iterable[T]
         :return: 异步生成器, 元素类型为 T
         """
