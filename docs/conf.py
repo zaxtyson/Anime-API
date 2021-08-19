@@ -25,7 +25,7 @@ copyright = '2021, zaxtyson'
 author = 'zaxtyson'
 
 # The full version, including alpha/beta/rc tags
-release = '1.3.0'
+release = '1.4.3'
 
 # -- General configuration ---------------------------------------------------
 
@@ -33,7 +33,7 @@ release = '1.3.0'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
+    'sphinx_automodapi.automodapi',
     'sphinx.ext.intersphinx',
     'sphinx.ext.viewcode'
 ]

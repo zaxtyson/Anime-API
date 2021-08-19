@@ -1,0 +1,16 @@
+# Byte-compiled / optimized
+__pycache__/
+*.py[cod]
+
+# Pycharm
+.idea/
+
+# Logs
+logs/
+
+# Sphinx build cache
+docs/_build/
+docs/api
+
+# Environment
+venv/

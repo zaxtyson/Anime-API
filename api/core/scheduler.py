@@ -5,7 +5,7 @@ from typing import Callable, Coroutine, Type
 from api.core.anime import *
 from api.core.danmaku import *
 from api.core.loader import ModuleLoader
-from api.core.proxy import StreamProxy
+from api.core.proxy import AnimeProxy
 from api.utils.logger import logger
 
 
@@ -104,15 +104,13 @@ class Scheduler:
         """解析一集视频的直链"""
         url_parser = self._loader.get_anime_url_parser(anime.module)
         logger.info(f"{url_parser.__class__.__name__} parsing {anime.raw_url}")
-        for _ in range(3):  # 3 次解析机会, 再不行就真的不行了
-            url = await url_parser._parse(anime.raw_url)
-            if url.is_available():
-                return url
-            logger.warning(f"Parse real url failed, retry...")
-        logger.warning(f"Parse real url failed 3 times, maybe this resource is not available")
+        url = await url_parser._parse(anime.raw_url)
+        if url.is_available():
+            return url
+        logger.warning(f"Parse real url failed")
         return AnimeInfo()
 
-    def get_anime_proxy_class(self, meta: AnimeMeta) -> Type[StreamProxy]:
+    def get_anime_proxy_class(self, meta: AnimeMeta) -> Type[AnimeProxy]:
         """获取视频代理器类"""
         return self._loader.get_anime_proxy_class(meta.module)
 

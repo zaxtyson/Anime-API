@@ -5,6 +5,8 @@ from time import time
 from typing import AsyncIterator, List, Optional, Union
 from urllib.parse import unquote
 
+from aiohttp import ClientResponse
+
 from api.core.abc import Tokenizable
 from api.core.helper import HtmlParseHelper
 from api.utils.logger import logger
@@ -86,7 +88,7 @@ class AnimeMeta(Tokenizable):
     @classmethod
     def build_from(cls, token: str) -> "AnimeMeta":
         """使用 token 构建一个不完整但可以被解析的 AnimeMeta 对象"""
-        name, detail_url = b16decode(token.upper()).decode("utf-8").split("|")
+        name, detail_url = b16decode(token.upper()).decode("utf-8").split("|", 1)
         meta = AnimeMeta()
         meta.module = "api.anime." + name
         meta.detail_url = detail_url
@@ -147,14 +149,15 @@ class AnimeInfo(HtmlParseHelper):
     解析之后的视频, 保存了链接和有效时间等信息
     """
 
-    def __init__(self, url: str = "", lifetime: int = 86400):
+    def __init__(self, url: str = "", lifetime: int = 86400, fmt: str = "", volatile: bool = False):
         super().__init__()
         self._url = unquote(url)  # 直链
         self._parse_time = time()  # 解析出直链的时刻
-        self._format = "unknown"  # 视频格式
+        self._format = fmt  # 视频格式
         self._lifetime = lifetime
         self._size = 0
-        self._resolution = "1280x720"
+        self._volatile = volatile  # 直链是否在访问后失效
+        # self._resolution = "0x0"
 
     @property
     def real_url(self) -> str:
@@ -175,30 +178,32 @@ class AnimeInfo(HtmlParseHelper):
     def size(self) -> float:
         return self._size
 
-    @property
-    def resolution(self) -> str:
-        return self._resolution
+    # @property
+    # def resolution(self) -> str:
+    #     return self._resolution
 
     def is_available(self) -> bool:
         """视频直链是有效"""
         return self._url.startswith("http") and self.left_lifetime > 0
 
     async def detect_more_info(self):
-        await self.init_session()
+        self._format = self._detect_format_from_url()
+        # 一些资源解析后只能被访问一次, 如果探测文件信息, 会导致直链失效
+        if self._volatile:
+            return
+
         logger.info("Detect information of video...")
-        self._lifetime = await self._detect_lifetime()
-        for _ in range(3):
-            resp = await self.get(self._url, allow_redirects=True)
-            if not resp or resp.status != 200:
-                continue
-            self._format = self._detect_format(resp.content_type)
-            self._size = resp.content_length
-            chunk = await resp.content.read(512)
-            self._resolution = self._detect_resolution(chunk)
-            break
+        await self.init_session()
+        self._lifetime = self._detect_lifetime_from_url()
+        resp = await self.head(self._url, allow_redirects=True)
+        if resp and resp.status == 200:
+            self._format = self._format or self._detect_format_from_resp(resp)
+            self._size = self._detect_size_from_resp(resp)
+            # chunk = await resp.content.read(512)
+            # self._resolution = self._detect_resolution(chunk)
         await self.close_session()
 
-    async def _detect_lifetime(self):
+    def _detect_lifetime_from_url(self) -> int:
         """尝试从直链中找到资源失效时间戳, 计算直链寿命"""
         ts_start = int(time() / 1e5)  # 当前时间戳的前5位
         stamps = re.findall(rf"{ts_start}\d{{5}}", self._url)
@@ -209,31 +214,40 @@ class AnimeInfo(HtmlParseHelper):
                 return lifetime
         return self._lifetime
 
-    def _detect_format(self, c_type: str):
-        if "m3u8" in self._url:
-            return "hls"
-        if ".flv" in self._url:
-            return "flv"
-        if ".mpd" in self._url:
-            return "dash"
-        if ".mp4" in self._url:
-            return "mp4"
-        # URL 无法判断, 尝试通过 HEAD 读取 Content-Type
-        if not c_type:
-            return "unknown"
+    def _detect_format_from_url(self) -> str:
+        """尝试从直链获取视频的格式信息"""
+        fmt_table = {".m3u8": "hls", ".flv": "flv", ".mpd": "dash", ".mp4": "mp4"}
+        for k, v in fmt_table.items():
+            if k in self._url:
+                return v
+        return ""
+
+    def _detect_format_from_resp(self, resp: ClientResponse) -> str:
+        c_type = resp.content_type
         if c_type in ["application/vnd.apple.mpegurl", "application/x-mpegurl"]:
             return "hls"
         if c_type in ["video/mp4", "application/octet-stream"]:
             return "mp4"
-        return "unknown"
+        return ""
 
-    def _detect_resolution(self, data: bytes) -> str:
-        # TODO: detect video resolution from meta block, MPEG-TS/MPEG-4
-        if self._format == "hls":
-            text = data.decode("utf-8")
-            if ret := re.search(r"RESOLUTION=(\d+x\d+)", text):
-                return ret.group(1)
-        return self._resolution
+    def _detect_size_from_resp(self, resp: ClientResponse) -> int:
+        return resp.content_length or -1
+
+    # def _detect_resolution(self, data: bytes) -> str:
+    #     # TODO: detect video resolution from meta block, MPEG-TS/MPEG-4
+    #     if self._format == "hls":
+    #         text = data.decode("utf-8")
+    #         if ret := re.search(r"RESOLUTION=(\d+x\d+)", text):
+    #             self._resolution = ret.group(1)
+    #     elif self._format == "mp4":
+    #         tkhd_box_pos = data.find(b"\x74\x6B\x68\x64")
+    #         if tkhd_box_pos != -1:
+    #             start = tkhd_box_pos + 0x4E
+    #             width = int(data[start:start + 4].hex(), 16)
+    #             height = int(data[start + 4:start + 8].hex(), 16)
+    #             self._resolution = f"{width}x{height}"
+    #             logger.debug(f"Find video resolution in tkhd box(MPEG-4): {self._resolution}")
+    #     return self._resolution
 
     def __repr__(self):
         return f"<AnimeInfo ({self._format}|{self._size}|{self.left_lifetime}s) {self._url[:40]}...>"
@@ -256,14 +270,13 @@ class AnimeSearcher(HtmlParseHelper):
     async def _search(self, keyword: str) -> AsyncIterator[AnimeMeta]:
         """本方法由引擎管理器负责调用, 创建 session, 捕获异常并记录"""
         try:
+            await self._before_init()
             await self.init_session()
             async for item in self.search(keyword):
                 yield item
         except Exception as e:
             logger.exception(e)
             return
-        finally:
-            await self.close_session()
 
 
 class AnimeDetailParser(HtmlParseHelper):
@@ -283,13 +296,12 @@ class AnimeDetailParser(HtmlParseHelper):
     async def _parse(self, detail_url: str) -> AnimeDetail:
         """本方法由引擎管理器负责调用, 创建 session, 捕获异常并记录"""
         try:
+            await self._before_init()
             await self.init_session()
             return await self.parse(detail_url)
         except Exception as e:
             logger.exception(e)
             return AnimeDetail()
-        finally:
-            await self.close_session()
 
 
 class AnimeUrlParser(HtmlParseHelper):
@@ -309,18 +321,18 @@ class AnimeUrlParser(HtmlParseHelper):
     async def _parse(self, raw_url: str) -> AnimeInfo:
         """解析直链, 捕获引擎模块未处理的异常"""
         try:
+            await self._before_init()
             await self.init_session()
             info = await self.parse(raw_url)
             if not isinstance(info, AnimeInfo):
                 info = AnimeInfo(info)  # 方便 parse 直接返回字符串链接
+            await info.detect_more_info()
             if info.is_available():  # 解析成功
-                await info.detect_more_info()
                 logger.info(f"Parse success: {info}")
+                logger.info(f"Real url: {info.real_url}")
                 return info
             logger.error(f"Parse failed: {info}")
             return AnimeInfo()
         except Exception as e:
             logger.exception(e)
             return AnimeInfo()
-        finally:
-            await self.close_session()

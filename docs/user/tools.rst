@@ -7,7 +7,7 @@
 HEAD/GET/POST
 =========================
 
-引擎模板中所以的类, 都继承自 `HtmlParseHelper` , 它封装了不少工具,
+引擎模板中所有的类, 都继承自 `HtmlParseHelper` , 它封装了不少工具,
 可以帮助你处理网页。当然，也提供了基本的请求 `HEAD` / `GET` / `POST` 方法,
 这些方法来自 `aiohttp` 库的 `ClientSession` 。
 
@@ -40,6 +40,24 @@ HEAD/GET/POST
         if not resp or resp.status != 200:
             return ""
         data = await resp.json(content_type=None)
+
+指定 DNS 服务器
+=========================
+
+由于网络环境的复杂性以及一些众所周知的原因， 你所使用的 DNS 服务器可能
+无法正确解析某些网站的域名。`HtmlParseHelper` 允许你在使用
+`HEAD` `GET` `POST` 时使用指定的 DNS 服务器解析域名。
+
+引擎模板中所有的类都可以重写该方法， 每个类设置的 DNS 服务器只对本类发出的请求生效。
+如 `AnimeSearcher` 设置了 DNS 服务器， 但 `AnimeDetailParser` 没有设置， 
+所以它仍然使用你系统的 DNS 服务器。 
+
+.. code-block:: python
+
+    def set_dns_server(self) -> List[str]:
+        """设置自定义的 DNS 服务器地址"""
+        return ["8.8.8.8", "8.8.4.4"]
+
 
 XPath
 ===================
