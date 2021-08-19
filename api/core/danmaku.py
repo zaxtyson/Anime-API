@@ -43,7 +43,7 @@ class DanmakuMeta(Tokenizable):
 
     @classmethod
     def build_from(cls, token: str) -> "DanmakuMeta":
-        name, play_url = b16decode(token.upper()).decode("utf-8").split("|")
+        name, play_url = b16decode(token.upper()).decode("utf-8").split("|", 1)
         meta = DanmakuMeta()
         meta.module = "api.danmaku." + name
         meta.play_url = play_url
@@ -149,8 +149,6 @@ class DanmakuSearcher(HtmlParseHelper):
         except Exception as e:
             logger.exception(e)
             return
-        finally:
-            await self.close_session()
 
 
 class DanmakuDetailParser(HtmlParseHelper):
@@ -165,8 +163,6 @@ class DanmakuDetailParser(HtmlParseHelper):
         except Exception as e:
             logger.exception(e)
             return DanmakuDetail()
-        finally:
-            await self.close_session()
 
 
 class DanmakuDataParser(HtmlParseHelper):
@@ -185,5 +181,3 @@ class DanmakuDataParser(HtmlParseHelper):
         except Exception as e:
             logger.exception(e)
             return DanmakuData()
-        finally:
-            await self.close_session()

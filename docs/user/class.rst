@@ -4,40 +4,40 @@
 相关类
 ==================
 
-.. automodule:: helper
+.. automodapi:: helper
     :members:
 
 --------------------------------------
 
-.. automodule:: agent
+.. automodapi:: agent
     :members:
 
 ----------------------------------------
 
-.. automodule:: anime
+.. automodapi:: anime
     :members:
 
 ---------------------------------------
 
-.. automodule:: danmaku
+.. automodapi:: danmaku
     :members:
 
 -----------------------------------------
 
-.. automodule:: cache
+.. automodapi:: cache
     :members:
 
 -----------------------------------------
 
-.. automodule:: proxy
+.. automodapi:: proxy
     :members:
 
 -------------------------------------------
 
-.. automodule:: tool
+.. automodapi:: tool
     :members:
 
 -----------------------------------------
 
-.. automodule:: useragent
+.. automodapi:: useragent
     :members:

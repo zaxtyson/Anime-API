@@ -1,4 +1,5 @@
 import asyncio
+import os
 from os.path import dirname
 
 from quart import Quart, jsonify, request, render_template, \
@@ -9,6 +10,7 @@ from api.core.agent import Agent
 from api.core.anime import *
 from api.core.danmaku import *
 from api.core.proxy import RequestProxy
+from api.utils.storage import Storage
 
 
 class APIRouter:
@@ -22,6 +24,7 @@ class APIRouter:
         self._domain = f"http://{host}:{port}"
         self._agent = Agent()
         self._config = Config()
+        self._storage = Storage()
         self._proxy = RequestProxy()
 
     def set_domain(self, domain: str):
@@ -31,6 +34,13 @@ class APIRouter:
         """
         self._domain = f"{domain}:{self._port}" if domain else self._domain
 
+    def set_proxy_host(self, path_prefix: str):
+        """
+        服务器端反向代理时使用, 设置 API 资源链接的路径前缀,
+        如: http://www.foo.bar/anime-api, 结尾不加 "/"
+        """
+        self._domain = path_prefix if path_prefix else self._domain
+
     def run(self):
         """启动 API 解析服务"""
 
@@ -39,6 +49,8 @@ class APIRouter:
 
         self._init_routers()
         # 为了解决事件循环内部出现的异常
+        if os.name == "nt":
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         loop = asyncio.new_event_loop()
         loop.set_exception_handler(exception_handler)
         asyncio.set_event_loop(loop)
@@ -159,9 +171,9 @@ class APIRouter:
             url = await self._agent.get_anime_real_url(token, int(playlist), int(episode))
             info = {
                 "raw_url": f"{self._domain}/anime/{token}/{playlist}/{episode}/url",
-                "proxy_url": f"{self._domain}/proxy/stream/{token}/{playlist}/{episode}",
+                "proxy_url": f"{self._domain}/proxy/anime/{token}/{playlist}/{episode}",
                 "format": url.format,
-                "resolution": url.resolution,
+                # "resolution": url.resolution,
                 "size": url.size,
                 "lifetime": url.left_lifetime
             }
@@ -170,8 +182,12 @@ class APIRouter:
         @self._app.route("/anime/<token>/<playlist>/<episode>/url")
         async def redirect_to_real_url(token: str, playlist: str, episode: str):
             """重定向到视频直链, 防止直链过期导致播放器无法播放"""
-            url = await self._agent.get_anime_real_url(token, int(playlist), int(episode))
-            return redirect(url.real_url)
+            proxy = await self._agent.get_anime_proxy(token, int(playlist), int(episode))
+            if not proxy or not proxy.is_available():
+                return Response("Resource not available", status=404)
+            if proxy.is_enforce_proxy():  # 该资源启用了强制代理
+                return redirect(f"/proxy/anime/{token}/{playlist}/{episode}")
+            return redirect(proxy.get_real_url())
 
         @self._app.route("/anime/<token>/<playlist>/<episode>/player")
         async def player_without_proxy(token, playlist, episode):
@@ -257,20 +273,27 @@ class APIRouter:
             """对跨域图片进行代理访问, 返回数据"""
             return await self._proxy.make_response(raw_url)
 
-        @self._app.route("/proxy/stream/<token>/<playlist>/<episode>")
-        async def video_stream_proxy(token, playlist, episode):
+        @self._app.route("/proxy/anime/<token>/<playlist>/<episode>")
+        async def anime_stream_proxy(token, playlist, episode):
             """代理访问普通的视频数据流"""
-            range_field = request.headers.get("range")
             proxy = await self._agent.get_anime_proxy(token, int(playlist), int(episode))
             if not proxy:
-                return Response("stream proxy error", status=404)
-            return await proxy.make_response(range_field)
+                return Response("proxy error", status=404)
 
-        @self._app.route("/proxy/hls/<token>/<playlist>/<episode>")
-        async def hls_stream_proxy(token, playlist, episode):
-            """代理访问 HLS 视频数据流"""
-            # TODO : implement hls stream proxy
-            return Response("HLS stream proxy not supported yet", status=500)
+            if proxy.get_stream_format() == "hls":  # m3u8 代理
+                proxy.set_chunk_proxy_router(f"{self._domain}/proxy/hls/{token}/{playlist}/{episode}")
+                return await proxy.make_response_for_m3u8()
+            else:  # mp4 代理
+                range_field = request.headers.get("range")
+                return await proxy.make_response_with_range(range_field)
+
+        @self._app.route("/proxy/hls/<token>/<playlist>/<episode>/<path:url>")
+        async def m3u8_chunk_proxy(token, playlist, episode, url):
+            """代理访问视频的某一块数据"""
+            proxy = await self._agent.get_anime_proxy(token, int(playlist), int(episode))
+            if not proxy:
+                return Response("m3u8 chunk proxy error", status=404)
+            return await proxy.make_response_for_chunk(url, request.args.to_dict())
 
         # ======================== System Interface ===============================
 
@@ -295,7 +318,7 @@ class APIRouter:
         async def show_global_settings():
             if request.method == "GET":
                 return jsonify(self._config.get_modules_status())
-            if request.method == "POST":
+            elif request.method == "POST":
                 options = await request.json
                 ret = {}
                 for option in options:
@@ -306,5 +329,46 @@ class APIRouter:
                     ok = self._agent.change_module_state(module, enable)
                     ret[module] = "success" if ok else "failed"
                 return jsonify(ret)
+            elif request.method == "OPTIONS":
+                return Response("")
+
+        @self._app.route("/system/storage", methods=["POST", "OPTIONS"])
+        async def web_storage():
+            """给前端持久化配置用"""
             if request.method == "OPTIONS":
                 return Response("")
+            if request.method == "POST":
+                payload = await request.json
+                if not payload:
+                    return jsonify({"msg": "payload format error"})
+
+                action: str = payload.get("action", "")
+                key: str = payload.get("key", "")
+                data: str = payload.get("data", "")
+
+                if not key:
+                    return jsonify({"msg": "key is invalid"})
+
+                if action.lower() == "get":
+                    return jsonify({
+                        "msg": "ok",
+                        "key": key,
+                        "data": self._storage.get(key)
+                    })
+                elif action.lower() == "set":
+                    self._storage.set(key, data)
+                    return jsonify({
+                        "msg": "ok",
+                        "key": key,
+                        "data": data,
+                    })
+                elif action.lower() == "del":
+                    return jsonify({
+                        "msg": "ok" if self._storage.delete(key) else "no data binds this key",
+                        "key": key
+                    })
+                else:
+                    return jsonify({
+                        "msg": "action is not supported",
+                        "action": action
+                    })
