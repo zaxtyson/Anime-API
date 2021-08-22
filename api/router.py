@@ -19,6 +19,8 @@ class APIRouter:
         self._root = dirname(__file__)
         self._app = Quart(__name__)
         self._debug = False
+        self._enforce_proxy_images = False
+        self._enforce_proxy_videos = False
         self._host = host
         self._port = port
         self._domain = f"http://{host}:{port}"
@@ -41,6 +43,24 @@ class APIRouter:
         """
         self._domain = path_prefix if path_prefix else self._domain
 
+    def enforce_proxy_images(self, op: bool):
+        """
+        是否强制代理图片流量
+        """
+        if op:
+            logger.warning("Enforce image proxy: ON")
+        self._enforce_proxy_images = op
+
+    def enforce_proxy_videos(self, op: bool):
+        """
+        是否强制代理全部视频流量
+        通常， 视频的流量代理器会决定该资源是否需要代理， 普通资源直接重定向到视频原始地址，
+        无法直接访问的资源才交由 API 代理. 如果设置本选项， 所有视频流量将被 API 代理
+        """
+        if op:
+            logger.warning("Enforce videos proxy: ON")
+        self._enforce_proxy_videos = op
+
     def run(self):
         """启动 API 解析服务"""
 
@@ -55,6 +75,12 @@ class APIRouter:
         loop.set_exception_handler(exception_handler)
         asyncio.set_event_loop(loop)
         self._app.run(host=self._host, port=self._port, debug=False, use_reloader=False, loop=loop)
+
+    def _get_image_url(self, url: str) -> str:
+        """图片是否切换到代理接口"""
+        if self._enforce_proxy_images:
+            return f"{self._domain}/proxy/image/{url}"
+        return url
 
     def _init_routers(self):
         """创建路由接口"""
@@ -92,7 +118,7 @@ class APIRouter:
                 for info in bangumi:
                     one_day["updates"].append({
                         "title": info.title,
-                        "cover_url": f"{info.cover_url}",  # 图片一律走代理, 防止浏览器跨域拦截
+                        "cover_url": self._get_image_url(info.cover_url),
                         "update_time": info.update_time,
                         "update_to": info.update_to
                     })
@@ -108,7 +134,7 @@ class APIRouter:
             for meta in result:
                 ret.append({
                     "title": meta.title,
-                    "cover_url": f"{meta.cover_url}",
+                    "cover_url": self._get_image_url(meta.cover_url),
                     "category": meta.category,
                     "description": meta.desc,
                     "score": 80,  # TODO: 番剧质量评分机制
@@ -122,7 +148,7 @@ class APIRouter:
             async def push(meta: AnimeMeta):
                 await websocket.send_json({
                     "title": meta.title,
-                    "cover_url": f"{meta.cover_url}",
+                    "cover_url": self._get_image_url(meta.cover_url),
                     "category": meta.category,
                     "description": meta.desc,
                     "score": 80,
@@ -143,7 +169,7 @@ class APIRouter:
 
             ret = {
                 "title": detail.title,
-                "cover_url": f"{detail.cover_url}",
+                "cover_url": self._get_image_url(detail.cover_url),
                 "description": detail.desc,
                 "category": detail.category,
                 "module": detail.module,
@@ -185,7 +211,7 @@ class APIRouter:
             proxy = await self._agent.get_anime_proxy(token, int(playlist), int(episode))
             if not proxy or not proxy.is_available():
                 return Response("Resource not available", status=404)
-            if proxy.is_enforce_proxy():  # 该资源启用了强制代理
+            if proxy.is_enforce_proxy() or self._enforce_proxy_videos:  # 该资源启用了强制代理
                 return redirect(f"/proxy/anime/{token}/{playlist}/{episode}")
             return redirect(proxy.get_real_url())
 

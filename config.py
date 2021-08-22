@@ -17,3 +17,16 @@ domain = "http://localhost"
 # 反向代理时使用, 该选项会覆盖 domain 的设置
 # 如: http://www.foo.bar/anime-api
 proxy_prefix = ""
+
+# 强制代理图片资源， 服务器部署时遇到图片跨域请启用此项
+enforce_proxy_images = True
+
+# 强制代理全部视频流量， 通常使用默认策略即可
+enforce_proxy_videos = False
+
+# 缓存策略, 秒
+cache_expire_policy = {
+    "anime": 60 * 30,  # 视频详情和播放列表缓存
+    "bangumi": 60 * 60 * 1,  # 番剧更新数据
+    "danmaku": 60 * 60 * 12  # 弹幕库搜索结果及弹幕数据
+}
