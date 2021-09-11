@@ -60,7 +60,6 @@ class ModuleLoader(object):
         except ModuleNotFoundError as e:
             logger.error(e)
 
-
     def load_utils_module(self, module: str):
         """
         只加载工具模块, 用于资源数据的解析

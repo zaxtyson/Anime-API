@@ -1,5 +1,3 @@
-from typing import List
-
 from quart import Blueprint, jsonify, Response, redirect, websocket, render_template
 
 from api import *

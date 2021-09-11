@@ -1,8 +1,9 @@
 from hashlib import md5
+from time import time
 from typing import Any
 
 import pympler.asizeof as asizeof
-from time import time
+
 from api.utils.logger import logger
 
 __all__ = ["CacheDB"]
