@@ -34,27 +34,23 @@ class Scheduler:
         如果设置了 callback, 忽视 co_callback
         """
         if not keyword:
-            return
+            return []
 
         async def run(searcher: AnimeSearcher):
             logger.info(f"{searcher.__class__.__name__} is searching for [{keyword}]")
             results = []
-            if callback is not None:
-                async for item in searcher._search(keyword):
+            async for item in searcher._search(keyword):
+                if callback:
                     callback(item)  # 每产生一个搜索结果, 通过回调函数处理
-                    results.append(item)
-                return results
-
-            if co_callback is not None:
-                async for item in searcher._search(keyword):
+                elif co_callback:
                     await co_callback(item)
-                    results.append(item)
-                return results
+                results.append(item)
+            return results
 
         searchers = self._loader.get_anime_searchers()
         if not searchers:
             logger.warning(f"No anime searcher enabled")
-            return
+            return []
 
         logger.info(f"Searching Anime -> [{keyword}], enabled engines: {len(searchers)}")
         start_time = perf_counter()
@@ -77,22 +73,18 @@ class Scheduler:
         async def run(searcher: DanmakuSearcher) -> List[DanmakuMeta]:
             logger.info(f"{searcher.__class__.__name__} is searching for [{keyword}]")
             results = []
-            if callback is not None:
-                async for item in searcher._search(keyword):
-                    results.append(item)
+            async for item in searcher._search(keyword):
+                if callback:
                     callback(item)
-                return results
-
-            if co_callback is not None:
-                async for item in searcher._search(keyword):
-                    results.append(item)
-                    await co_callback(item)
-                return results
+                elif co_callback:
+                    co_callback(item)
+                results.append(item)
+            return results
 
         searchers = self._loader.get_danmaku_searcher()
         if not searchers:
             logger.warning(f"No danmaku searcher enabled")
-            return
+            return []
 
         logger.info(f"Searching Danmaku -> [{keyword}], enabled engines: {len(searchers)}")
         start_time = perf_counter()

@@ -8,7 +8,7 @@ from api.core.proxy import AnimeProxy
 from api.core.scheduler import Scheduler
 from api.iptv.iptv import TVSource, get_sources
 from api.update.bangumi import Bangumi
-from config import cache_expire_policy as policy
+from global_config import cache_expire_policy as policy
 
 
 class Agent:
@@ -73,7 +73,7 @@ class Agent:
             *,
             callback: Callable[[DanmakuMeta], None] = None,
             co_callback: Callable[[DanmakuMeta], Coroutine] = None
-    ) -> None:
+    ) -> List[DanmakuMeta]:
         """搜索弹幕库, 返回摘要信息, 过滤相似度低的数据"""
         # TODO: Implement data filter
 
@@ -82,16 +82,14 @@ class Agent:
         if not metas:
             metas = await self._scheduler.search_danmaku(keyword, callback=callback, co_callback=co_callback)
             self._danmaku_db.store(metas, keyword)
-            return
+            return metas
 
         # 有缓存就直接用
-        if callback is not None:
-            for item in metas:
+        for item in metas:
+            if callback:
                 callback(item)
-            return
-        if co_callback is not None:
-            for item in metas:
-                await co_callback(item)
+            elif co_callback:
+                co_callback(item)
 
     async def get_anime_detail(self, token: str) -> Optional[AnimeDetail]:
         """获取番剧详情信息, 如果有缓存, 使用缓存的值"""

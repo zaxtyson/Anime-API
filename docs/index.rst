@@ -16,10 +16,11 @@ Anime-API 是一个异步的资源解析框架, 基于 asyncio 和 aiohttp
 
 **创建 API 服务**:
 
-    >>> from api.router import APIRouter
-    >>> app = APIRouter("127.0.0.1", 6001)
-    >>> app.set_domain("http://localhost")
-    >>> app.run()
+    >>> from api.router import app, loop
+    >>> from global_config import host, port
+    >>>
+    >>> if __name__ == '__main__':
+    >>>    app.run(host, port, debug=False, loop=loop)
 
 ----------------------
 
