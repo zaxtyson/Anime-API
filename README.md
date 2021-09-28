@@ -15,8 +15,15 @@ Anime-API 是一个异步的资源解析框架, 用于组织各类爬虫抓取�
 
 因为前期以动漫、弹幕抓取为主, 所以叫 Anime-API, 但是后面会加入漫画、小说、音乐等抓取功能~
 
+## 使用 Docker 启动
 
-## API 文档
+```
+git clone https://github.com/zaxtyson/Anime-API.git
+docker build -t zaxtyson/anime-api:local .
+docker run -itd -e ANIME_ADDR=0.0.0.0 --name anime-api zaxtyson/anime-api:local
+```
+
+## 更多文档
 
 [点我点我](https://anime-api.readthedocs.io/zh_CN/latest/#)
 
