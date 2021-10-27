@@ -71,9 +71,13 @@ class AgeFansAppDetailParser(AnimeDetailParser):
         data = await resp.json(content_type=None)
         data = data["AniInfo"]
         detail.title = data["R动画名称"]
-        detail.cover_url = "http:" + data["R封面图"]
+        detail.cover_url = data["R封面图"]
         detail.desc = data["R简介"]
         detail.category = data["R标签"]
+
+        # 修复不完整的cover url
+        if detail.cover_url.startswith('//'):
+            detail.cover_url = 'http:' + detail.cover_url
 
         for playlist in data["R在线播放All"]:
             if not playlist:
