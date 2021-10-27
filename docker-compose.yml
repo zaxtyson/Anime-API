@@ -1,0 +1,11 @@
+version: "3.9"
+services:
+  web:
+    build: .
+    image: zaxtyson/anime-api:local
+    ports:
+      - "127.0.0.1:6001:443"
+    environment:
+      ANIME_ADDR: 0.0.0.0
+      ANIME_PORT: 443
+      ANIME_DOMAIN: https://example.com
