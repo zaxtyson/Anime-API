@@ -10,7 +10,7 @@ from api.core.agent import Agent
 from api.core.anime import *
 from api.core.danmaku import *
 from api.core.proxy import RequestProxy
-from api.utils.storage import Storage
+from api.utils.authenticate import auth_required
 
 
 class APIRouter:
@@ -24,7 +24,6 @@ class APIRouter:
         self._domain = f"http://{host}:{port}"
         self._agent = Agent()
         self._config = Config()
-        self._storage = Storage()
         self._proxy = RequestProxy()
 
     def set_domain(self, domain: str):
@@ -40,6 +39,10 @@ class APIRouter:
         如: http://www.foo.bar/anime-api, 结尾不加 "/"
         """
         self._domain = path_prefix if path_prefix else self._domain
+
+    def set_basic_auth_cred(self, username: str, password: str):
+        self._app.config['BASIC_AUTH_USERNAME'] = username
+        self._app.config['BASIC_AUTH_PASSWORD'] = password
 
     def run(self):
         """启动 API 解析服务"""
@@ -257,23 +260,29 @@ class APIRouter:
         @self._app.route("/iptv/list")
         async def get_iptv_list():
             """IPTV 直播源"""
-            sources = self._agent.get_iptv_sources()
+            sources = await self._agent.get_iptv_sources()
             data = []
             for source in sources:
                 data.append({
                     "name": source.name,
+                    "logo_url": source.logo_url,
                     "url": source.url
                 })
-            return jsonify(data)
+            rv = jsonify(data)
+            rv.cache_control.public = True
+            rv.cache_control.max_age = 172800  # 48 hours
+            return rv
 
         # ======================== Proxy Interface ===============================
 
         @self._app.route("/proxy/image/<path:raw_url>")
+        @auth_required
         async def image_proxy(raw_url):
             """对跨域图片进行代理访问, 返回数据"""
             return await self._proxy.make_response(raw_url)
 
         @self._app.route("/proxy/anime/<token>/<playlist>/<episode>")
+        @auth_required
         async def anime_stream_proxy(token, playlist, episode):
             """代理访问普通的视频数据流"""
             proxy = await self._agent.get_anime_proxy(token, int(playlist), int(episode))
@@ -288,6 +297,7 @@ class APIRouter:
                 return await proxy.make_response_with_range(range_field)
 
         @self._app.route("/proxy/hls/<token>/<playlist>/<episode>/<path:url>")
+        @auth_required
         async def m3u8_chunk_proxy(token, playlist, episode, url):
             """代理访问视频的某一块数据"""
             proxy = await self._agent.get_anime_proxy(token, int(playlist), int(episode))
@@ -297,24 +307,20 @@ class APIRouter:
 
         # ======================== System Interface ===============================
 
-        @self._app.route("/system/logs")
-        async def show_logs():
-            file = f"{self._root}/logs/api.log"
-            with open(file, encoding="utf-8") as f:
-                text = f.read()
-            return Response(text, mimetype="text/plain")
-
         @self._app.route("/system/version")
+        @auth_required
         async def show_system_version():
             return jsonify(self._config.get_version())
 
         @self._app.route("/system/clear")
+        @auth_required
         async def clear_system_cache():
             """清空 API 的临时缓存数据"""
             mem_free = self._agent.cache_clear()
             return jsonify({"clear": "success", "free": mem_free})
 
         @self._app.route("/system/modules", methods=["GET", "POST", "OPTIONS"])
+        @auth_required
         async def show_global_settings():
             if request.method == "GET":
                 return jsonify(self._config.get_modules_status())
@@ -331,44 +337,3 @@ class APIRouter:
                 return jsonify(ret)
             elif request.method == "OPTIONS":
                 return Response("")
-
-        @self._app.route("/system/storage", methods=["POST", "OPTIONS"])
-        async def web_storage():
-            """给前端持久化配置用"""
-            if request.method == "OPTIONS":
-                return Response("")
-            if request.method == "POST":
-                payload = await request.json
-                if not payload:
-                    return jsonify({"msg": "payload format error"})
-
-                action: str = payload.get("action", "")
-                key: str = payload.get("key", "")
-                data: str = payload.get("data", "")
-
-                if not key:
-                    return jsonify({"msg": "key is invalid"})
-
-                if action.lower() == "get":
-                    return jsonify({
-                        "msg": "ok",
-                        "key": key,
-                        "data": self._storage.get(key)
-                    })
-                elif action.lower() == "set":
-                    self._storage.set(key, data)
-                    return jsonify({
-                        "msg": "ok",
-                        "key": key,
-                        "data": data,
-                    })
-                elif action.lower() == "del":
-                    return jsonify({
-                        "msg": "ok" if self._storage.delete(key) else "no data binds this key",
-                        "key": key
-                    })
-                else:
-                    return jsonify({
-                        "msg": "action is not supported",
-                        "action": action
-                    })

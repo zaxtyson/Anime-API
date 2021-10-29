@@ -51,9 +51,9 @@ class Agent:
             self._others_db.store(bangumi, "bangumi")
         return bangumi
 
-    def get_iptv_sources(self) -> List[TVSource]:
+    async def get_iptv_sources(self) -> List[TVSource]:
         """获取 IPTV 源列表"""
-        return get_sources()
+        return await get_sources()
 
     async def get_anime_metas(
             self,
