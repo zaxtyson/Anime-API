@@ -3,6 +3,7 @@ services:
   web:
     build: .
     image: zaxtyson/anime-api:local
+    restart: always
     ports:
       - "127.0.0.1:6001:443"
     environment:
