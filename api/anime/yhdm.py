@@ -3,25 +3,16 @@ from api.core.anime import *
 
 class SakuraAnime(AnimeSearcher):
 
-    async def fetch_html(self, keyword: str, page: int):
-        api = f"http://www.yhdm.so/search/{keyword}"
-        resp = await self.get(api, params={"page": page})
+    async def search(self, keyword: str):
+        api = f"http://www.yinghuacd.com/search/{keyword}"
+        resp = await self.get(api)
         if not resp or resp.status != 200:
-            return ""
+            return
         html = await resp.text()
         if "文件不存在" in html:  # 网站日常抛锚
-            return ""
-        return html
+            return
 
-    def parse_last_page_index(self, html: str) -> int:
-        max_page = self.xpath(html, '//div[@class="pages"]/a[@id="lastn"]/text()')  # ['12'] 或 []
-        if not max_page:
-            return 1  # 搜索结果只有一页
-        return int(max_page[0])
-
-    def parse_anime_metas(self, html: str):
         meta_list = self.xpath(html, '//div[@class="lpic"]//li')
-        ret = []
         for meta in meta_list:
             anime = AnimeMeta()
             anime.title = " ".join(meta.xpath(".//h2/a/@title"))
@@ -29,32 +20,14 @@ class SakuraAnime(AnimeSearcher):
             anime.category = " ".join(meta.xpath("./span[2]/a/text()"))
             anime.desc = meta.xpath("./p/text()")[0]
             anime.detail_url = meta.xpath("./a/@href")[0]  # /show/5031.html
-            ret.append(anime)
-        return ret
-
-    async def parse_one_page(self, keyword: str, page: int):
-        html = await self.fetch_html(keyword, page)
-        return self.parse_anime_metas(html)
-
-    async def search(self, keyword: str):
-        html = await self.fetch_html(keyword, 1)
-        if not html:
-            return
-        for item in self.parse_anime_metas(html):
-            yield item
-
-        pages = self.parse_last_page_index(html)
-        if pages > 1:
-            tasks = [self.parse_one_page(keyword, p) for p in range(2, pages + 1)]
-            async for item in self.as_iter_completed(tasks):
-                yield item
+            yield anime
 
 
 class SakuraDetailParser(AnimeDetailParser):
 
     async def parse(self, detail_url: str):
         detail = AnimeDetail()
-        url = "http://www.yhdm.so" + detail_url
+        url = "http://www.yinghuacd.com" + detail_url
         resp = await self.get(url)
         if not resp or resp.status != 200:
             return detail
@@ -80,7 +53,7 @@ class SakuraDetailParser(AnimeDetailParser):
 class SakuraUrlParser(AnimeUrlParser):
 
     async def parse(self, raw_url: str):
-        url = "http://www.yhdm.so/" + raw_url
+        url = "http://www.yinghuacd.com" + raw_url
         resp = await self.get(url)
         if not resp or resp.status != 200:
             return ""

@@ -1,0 +1,15 @@
+{
+    "animeUI": {
+        "blending": "dew",
+        "style": "default",
+        "pilot": {
+            "_value": null,
+            "immerseMode": true
+        },
+        "server": {
+            "_value": null,
+            "http": "http://127.0.0.1:6001/",
+            "socket": "ws://127.0.0.1:6001/"
+        }
+    }
+}

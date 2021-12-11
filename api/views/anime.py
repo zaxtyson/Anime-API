@@ -1,7 +1,5 @@
-from quart import Blueprint, jsonify, Response, redirect, websocket, render_template
-
+from quart import Blueprint, jsonify, Response, redirect, websocket, render_template, json
 from api import *
-from api.core.anime import AnimeMeta
 
 mod = Blueprint("anime", __name__, url_prefix="/anime")
 
@@ -36,9 +34,8 @@ async def bangumi_updates():
 @mod.route("/search/<path:keyword>")
 async def search(keyword):
     """番剧搜索, 该方法回阻塞直到所有引擎数据返回"""
-    result = await agent.get_anime_metas(keyword.strip())
     ret = []
-    for meta in result:
+    async for meta in agent.get_anime_metas(keyword.strip()):
         ret.append({
             "title": meta.title,
             "cover_url": get_image_url(meta.cover_url),
@@ -53,8 +50,9 @@ async def search(keyword):
 
 @mod.websocket("/search")
 async def ws_search():
-    async def push(meta: AnimeMeta):
-        await websocket.send_json({
+    keyword = await websocket.receive()
+    async for meta in agent.get_anime_metas(keyword.strip()):
+        data = {
             "title": meta.title,
             "cover_url": get_image_url(meta.cover_url),
             "category": meta.category,
@@ -62,11 +60,8 @@ async def ws_search():
             "score": 80,
             "engine": meta.module,
             "url": f"{domain}/anime/{meta.token}"
-        })
-
-    # route path 不能有中文, 客户端 send 关键字
-    keyword = await websocket.receive()
-    await agent.get_anime_metas(keyword.strip(), co_callback=push)
+        }
+        await websocket.send(json.dumps(data))
 
 
 @mod.route("/<token>")

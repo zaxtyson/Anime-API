@@ -46,50 +46,41 @@ class Agent:
 
     async def get_bangumi_updates(self):
         """获取番组表信息"""
-        bangumi = self._bangumi_db.fetch("bangumi")
-        if not bangumi:  # 缓存起来
-            bangumi = await self._bangumi.get_bangumi_updates()
-            self._bangumi_db.store(bangumi, "bangumi")
-        return bangumi
+        bangumi_cache = self._bangumi_db.fetch("bangumi")
+        if bangumi_cache:  # 缓存起来
+            bangumi_cache = await self._bangumi.get_bangumi_updates()
+            self._bangumi_db.store(bangumi_cache, "bangumi")
+        return bangumi_cache
 
     def get_iptv_sources(self) -> List[TVSource]:
         """获取 IPTV 源列表"""
         return get_sources()
 
-    async def get_anime_metas(
-            self,
-            keyword: str,
-            *,
-            callback: Callable[[AnimeMeta], None] = None,
-            co_callback: Callable[[AnimeMeta], Coroutine] = None
-    ) -> List[AnimeMeta]:
+    async def get_anime_metas(self, keyword: str) -> AsyncIterator[AnimeMeta]:
         """搜索番剧, 返回摘要信息, 过滤相似度低的数据"""
         # 番剧搜索不缓存, 异步推送
-        return await self._scheduler.search_anime(keyword, callback=callback, co_callback=co_callback)
+        async for meta in self._scheduler.search_anime(keyword):
+            yield meta
 
-    async def get_danmaku_metas(
-            self,
-            keyword: str,
-            *,
-            callback: Callable[[DanmakuMeta], None] = None,
-            co_callback: Callable[[DanmakuMeta], Coroutine] = None
-    ) -> List[DanmakuMeta]:
+    async def get_danmaku_metas(self, keyword: str) -> AsyncIterator[DanmakuMeta]:
         """搜索弹幕库, 返回摘要信息, 过滤相似度低的数据"""
         # TODO: Implement data filter
 
         # 番剧搜索结果是相似的, 对应的弹幕搜索结果相对固定, 缓存备用
-        metas = self._danmaku_db.fetch(keyword)
-        if not metas:
-            metas = await self._scheduler.search_danmaku(keyword, callback=callback, co_callback=co_callback)
-            self._danmaku_db.store(metas, keyword)
-            return metas
+        metas_cache = self._danmaku_db.fetch(keyword)
+        if metas_cache:
+            # 有缓存就直接用
+            logger.info(f"Using cached {metas_cache}")
+            for item in metas_cache:
+                yield item
+            raise StopAsyncIteration
 
-        # 有缓存就直接用
-        for item in metas:
-            if callback:
-                callback(item)
-            elif co_callback:
-                co_callback(item)
+        # 无缓存
+        cache = []
+        async for meta in self._scheduler.search_danmaku(keyword):
+            cache.append(meta)
+            yield meta
+        self._danmaku_db.store(metas_cache, keyword)
 
     async def get_anime_detail(self, token: str) -> Optional[AnimeDetail]:
         """获取番剧详情信息, 如果有缓存, 使用缓存的值"""

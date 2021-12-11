@@ -1,9 +1,6 @@
-from typing import List
-
-from quart import Blueprint, jsonify, Response, websocket
+from quart import Blueprint, jsonify, Response, websocket, json
 
 from api import agent, domain
-from api.core.danmaku import DanmakuMeta
 
 mod = Blueprint("danmaku", __name__, url_prefix="/danmaku")
 
@@ -11,35 +8,32 @@ mod = Blueprint("danmaku", __name__, url_prefix="/danmaku")
 @mod.route("/search/<path:keyword>")
 async def search(keyword):
     """搜索番剧弹幕库"""
-    result: List[DanmakuMeta] = []
-    await agent.get_danmaku_metas(keyword.strip(), callback=lambda m: result.append(m))
-    data = []
-    for meta in result:
-        data.append({
+    ret = []
+    async for meta in agent.get_danmaku_metas(keyword.strip()):
+        ret.append({
             "title": meta.title,
             "num": meta.num,
             "module": meta.module,
             "score": 80,  # TODO: 弹幕质量评分机制
             "url": f"{domain}/danmaku/{meta.token}"
         })
-    return jsonify(data)
+    return jsonify(ret)
 
 
 @mod.websocket("/search")
 async def ws_search():
     """搜索番剧弹幕库"""
 
-    async def push(meta: DanmakuMeta):
-        await websocket.send_json({
+    keyword = await websocket.receive()
+    async for meta in agent.get_danmaku_metas(keyword.strip()):
+        data = {
             "title": meta.title,
             "num": meta.num,
             "module": meta.module,
             "score": 80,
             "url": f"{domain}/danmaku/{meta.token}"
-        })
-
-    keyword = await websocket.receive()
-    await agent.get_danmaku_metas(keyword.strip(), co_callback=push)
+        }
+        websocket.send(json.dumps(data))
 
 
 @mod.route("/<token>")

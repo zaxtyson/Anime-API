@@ -5,7 +5,7 @@ from api.core.agent import Agent
 from api.core.proxy import RequestProxy
 from global_config import *
 
-# ＡＰＩ　根目录
+# API 根目录
 root_path = dirname(__file__)
 
 # 全局对象

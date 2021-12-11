@@ -1,3 +1,4 @@
+import asyncio
 import re
 
 from quart import Response, stream_with_context
@@ -40,8 +41,12 @@ class RequestProxy(HttpProxy):
         """代理访问远程请求"""
         await self.init_session()
         resp = await self.get(url, allow_redirects=True)
-        if not resp or resp.status != 200:
-            return Response("resource maybe not available", status=404)
+        if not resp:
+            # 再试一次
+            resp = await self.get(url, allow_redirects=True)
+            if not resp:
+                return Response("resource maybe not available", status=404)
+
         data = await resp.read()
         resp_headers = {
             "Content-Type": resp.content_type,
@@ -119,7 +124,8 @@ class StreamProxy(BaseAnimeProxy):
 
         @stream_with_context
         async def stream_iter():
-            while chunk := await resp.content.read(4096):
+            chunk = await resp.content.read(4096)
+            while chunk:
                 yield chunk
 
         status = 206 if self._info.format == "mp4" else 200  # 否则无法拖到进度条
